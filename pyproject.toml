@@ -1,0 +1,20 @@
+[project]
+name = "multirl-drone-coverage"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Randy Chen",email = "jushanc2@illinois.edu"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy (>=2.2.2,<3.0.0)",
+    "cvxopt (>=1.3.2,<2.0.0)",
+    "gym (>=0.26.2,<0.27.0)",
+    "argparse (>=1.4.0,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

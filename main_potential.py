@@ -10,7 +10,6 @@ import pickle
 import shutil
 import os
 import time
-from time import perf_counter
 
 solvers.options['show_progress'] = False
 
@@ -43,6 +42,12 @@ def generate_phi(env_shape, action_space, n_drones):
         return state.astype(int).reshape(-1, 1)
     return phi, state_dim * action_space ** n_drones
 
+
+def compute_potential(phi, theta, S, A, n_drones):
+    """
+    Computes the global potential function J(S, A) as the sum of all agents' Q-values. We realize that we have a Markov Potential Game
+    """
+    return sum([phi(S, A).T.dot(theta[i]).item() for i in range(n_drones)])
 
 def generate_pi(env_shape, action_space, n_drones):
     def pi(phi, theta, S, eps=0.9):
@@ -84,6 +89,7 @@ def generate_pi(env_shape, action_space, n_drones):
                                                             phi(S, action).T.dot(theta[i]).item() - phi(S, action_).T.dot(theta[i]).item()
                                                         )
 
+
                 G.append(arr)
                 h.append(0)
 
@@ -100,6 +106,69 @@ def generate_pi(env_shape, action_space, n_drones):
         # random tiebreaking among max value actions
         A = actions[np.random.choice(np.flatnonzero(action_values == action_values.max()))]
         return {drone: A[drone] for drone in range(n_drones)}
+    return pi
+
+def generate_pi_potential(env_shape, action_space, n_drones):
+    def pi(phi, theta, S, eps=0.9):
+        sample = np.random.random()
+        if sample < eps:
+            # Exploration: Random joint action
+            return {drone: np.random.choice(action_space) for drone in range(n_drones)}
+
+        actions = list(product(*((np.arange(action_space),) * n_drones)))
+        action_values = []
+        for action in actions:
+            A = []
+            b = []
+            G = []
+            h = []
+            c = np.zeros(n_drones * action_space)
+
+            # Cost vector based on global potential
+            for i in range(n_drones):
+                c[i * action_space + action[i]] -= phi(S, action).T.dot(theta[i]).item()
+
+            # Add inequality constraints (non-negativity)
+            G.append(-1 * np.identity(n_drones * action_space))
+            h.extend([0] * (n_drones * action_space))
+
+            # Add equality constraints (valid probability distribution for each drone)
+            for i in range(n_drones):
+                arr = np.zeros(n_drones * action_space)
+                arr[i * action_space: (i + 1) * action_space] = 1
+                A.append(arr)
+                b.append(1)
+
+            # Incentive compatibility constraints
+            for i in range(n_drones):
+                arr = np.zeros(n_drones * action_space)
+                for a in range(action_space):
+                    action_ = tuple(x if j != i else a for j, x in enumerate(action))
+                    arr[i * action_space + action[i]] -= (
+                        phi(S, action).T.dot(theta[i]).item()
+                        - phi(S, action_).T.dot(theta[i]).item()
+                    )
+                G.append(arr)
+                h.append(0)
+
+            # Solve LP
+            A = matrix(np.stack(A).astype(float))
+            b = matrix(np.stack(b).astype(float))
+            c = matrix(np.array(c).flatten().astype(float).reshape(-1, 1))
+            G = matrix(np.vstack(G).astype(float))
+            h = matrix(np.array(h).astype(float).reshape(-1, 1))
+
+            solved = solvers.lp(c, G, h, A=A, b=b)
+            sol = np.array(solved['x'])
+            # Compute the potential value
+            action_values.append(
+                np.sum([phi(S, action).T.dot(theta[i]) * sol[i * action_space + action[i]] for i in range(n_drones)])
+            )
+
+        # Choose the action that maximizes the global potential
+        action_values = np.array(action_values)
+        best_action = actions[np.random.choice(np.flatnonzero(action_values == action_values.max()))]
+        return {drone: best_action[drone] for drone in range(n_drones)}
     return pi
 
 
@@ -142,12 +211,12 @@ def main():
     phi, phi_dim = generate_phi(env_dim, action_space, args.n_drones)
     theta = np.zeros((args.n_drones, phi_dim))
 
-    pi = generate_pi(env_dim, action_space, args.n_drones)
+    pi = generate_pi_potential(env_dim, action_space, args.n_drones)
 
     episode_rewards = np.zeros(args.n_episodes)
     episode_steps = np.zeros(args.n_episodes).astype(int)
     steps = 0
-    t_start = perf_counter()
+
     try:
         for episode in range(args.n_episodes):
             if args.perturb_foi is not None and episode == int(args.perturb_foi[1]):
@@ -159,38 +228,39 @@ def main():
             state = env.reset()
             done = False
             for k in range(args.episode_max_steps):
+                epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
+                pi_A = pi(phi, theta, state, eps=epsilon)
+                next_state, reward, done, meta = env.step(pi_A)
+                A = tuple([pi_A[drone] for drone in range(args.n_drones)])
+                actions = product(*((np.arange(action_space),) * args.n_drones))
+                
+                # Compute potential for all actions
+                q_next = np.max([compute_potential(phi, theta, next_state, action, args.n_drones) for action in actions])
+                
+                # Update theta using the global reward
                 for i in range(args.n_drones):
-                    epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
-                    pi_A = pi(phi, theta, state, eps=epsilon)
-                    next_state, reward, done, meta = env.step(pi_A)
-                    A = tuple([pi_A[drone] for drone in range(args.n_drones)])
-                    actions = product(*((np.arange(action_space),) * args.n_drones))
-                    q_next = np.max([phi(next_state, action).T.dot(theta[i]) for action in actions])
-                    theta[i] = theta[i] + args.lr * (reward + args.gamma * q_next - phi(state, A).T.dot(theta[i])) * phi(state, A).flatten()
-                    episode_rewards[episode] += reward
-                    
-                    state = next_state
-                    if done:
-                        break
-                episode_steps[episode] += 1
+                    theta[i] = theta[i] + args.lr * (
+                        reward + args.gamma * q_next - phi(state, A).T.dot(theta[i])
+                    ) * phi(state, A).flatten()
+                
+                episode_rewards[episode] += reward
+                state = next_state
                 steps += 1
                 if done:
                     break
             print(f'Episode {episode}: {k + 1} steps, reward is {episode_rewards[episode]}')
     except KeyboardInterrupt:
         pass
-    tf = perf_counter()
-    final_time = tf - t_start
     #####################################################
-    plt.figure(dpi=150)
-    plt.ylim(0, args.episode_max_steps)
-    plt.plot(episode_steps)
-    plt.savefig(os.path.join(args.output_dir, 'episode_steps.png'))
-    pickle.dump(episode_steps, open(os.path.join(args.output_dir, 'episode_steps.pkl'), 'wb'))
-    
     # plt.figure(dpi=150)
-    # plt.plot(episode_rewards)
-    # plt.savefig(os.path.join(args.output_dir, 'episode_rewards.png'))
+    # plt.ylim(0, args.episode_max_steps)
+    # plt.plot(episode_steps)
+    # plt.savefig(os.path.join(args.output_dir, 'episode_steps.png'))
+    # pickle.dump(episode_steps, open(os.path.join(args.output_dir, 'episode_steps.pkl'), 'wb'))
+
+    plt.figure(dpi=150)
+    plt.plot(episode_rewards)
+    plt.savefig(os.path.join(args.output_dir, 'episode_rewards.png'))
     # pickle.dump(episode_rewards, open(os.path.join(args.output_dir, 'episode_rewards.pkl'), 'wb'))
 
 

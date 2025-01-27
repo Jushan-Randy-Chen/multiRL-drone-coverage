@@ -1,6 +1,8 @@
 import gym
 import numpy as np
 from enum import Enum
+from itertools import combinations
+
 
 class FieldCoverageEnv(gym.Env):
     """Field coverage environment for multi-agent cooperative reinforcement learning."""
@@ -56,15 +58,22 @@ class FieldCoverageEnv(gym.Env):
             self._move_drone(drone, self.Action(a))
         observation = self._state()
 
+         # Calculate coverage
+        masks = self._view_masks()
+        coverage = 0
+        foi = self.foi.astype(int)
+        for i in self._drones:
+            coverage += np.sum(masks[i] & foi)
+
         if potential:
-            reward, success = self._reward_individual()
+            reward, global_reward, success = self._reward_individual()
             done = success or self._steps == self.max_steps
-            return observation, reward, done, {'success': success}
+            return observation, reward, global_reward, done, {'success': success, 'coverage': coverage}
         else:
             reward = self._reward()
             success = reward > 0
             done = success or self._steps == self.max_steps
-            return observation, reward, done, {'success': success}
+            return observation, reward, done, {'success': success, 'coverage': coverage}
 
     def _state(self):
         return [x.pos for x in self._drones.values()]
@@ -74,10 +83,10 @@ class FieldCoverageEnv(gym.Env):
         coverage = 0
         overlap = 0
         foi = self.foi.astype(int)
-        for i in self._drones:
+        for i in masks:  # Only iterate over keys present in the masks dictionary
             coverage_i = np.sum(masks[i] & foi)
             coverage += coverage_i
-            for j in self._drones:
+            for j in masks:
                 if j != i:
                     overlap += np.sum(masks[i] & masks[j] & foi)
         return coverage - overlap
@@ -101,10 +110,10 @@ class FieldCoverageEnv(gym.Env):
     def _compute_overlap(self, masks):
         """Compute total overlap between drones."""
         overlap = 0
-        for i, j in combinations(self._drones, 2):
-            overlap += np.sum(masks[i] & masks[j] & self.foi)
+        foi = self.foi.astype(int)  # cast to int
+        for i, j in combinations(self._drones.keys(), 2):
+            overlap += np.sum(masks[i] & masks[j] & foi)
         return overlap
-    
 
 
     def _reward(self):

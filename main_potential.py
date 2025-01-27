@@ -42,13 +42,6 @@ def generate_phi(env_shape, action_space, n_drones):
         return state.astype(int).reshape(-1, 1)
     return phi, state_dim * action_space ** n_drones
 
-
-def compute_potential(phi, theta, S, A, n_drones):
-    """
-    Computes the global potential function J(S, A) as the sum of all agents' Q-values. We realize that we have a Markov Potential Game
-    """
-    return sum([phi(S, A).T.dot(theta[i]).item() for i in range(n_drones)])
-
 def generate_pi(env_shape, action_space, n_drones):
     def pi(phi, theta, S, eps=0.9):
         if np.random.random() < eps:
@@ -130,7 +123,7 @@ def main():
                 pi_A = pi(phi, theta, state, eps=epsilon)
                 
                 # Environment step
-                next_state, individual_rewards, global_reward, done, meta = env.step(pi_A)
+                next_state, individual_rewards, global_reward, done, meta = env.step(pi_A, potential=True)
                 episode_coverage.append(meta['coverage'])
                 
                 # Q-learning updates

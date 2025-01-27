@@ -64,7 +64,8 @@ class FieldCoverageEnv(gym.Env):
         foi = self.foi.astype(int)
         for i in self._drones:
             coverage += np.sum(masks[i] & foi)
-
+        coverage = coverage - self._compute_overlap(masks)
+        
         if potential:
             reward, global_reward, success = self._reward_individual()
             done = success or self._steps == self.max_steps

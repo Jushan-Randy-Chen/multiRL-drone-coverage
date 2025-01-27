@@ -168,7 +168,7 @@ def main():
                     q_next = np.max([phi(next_state, action).T.dot(theta[i]) for action in actions])
                     theta[i] = theta[i] + args.lr * (reward + args.gamma * q_next - phi(state, A).T.dot(theta[i])) * phi(state, A).flatten()
                     episode_rewards[episode] += reward
-                    
+            
                     state = next_state
                     if done:
                         break

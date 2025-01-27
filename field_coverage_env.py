@@ -50,18 +50,62 @@ class FieldCoverageEnv(gym.Env):
         self._drones = drones
         return self._state()
 
-    def step(self, action):
+    def step(self, action, potential = False):
         assert len(action) == len(self._drones), 'Joint action must be defined for each agent.'
         for drone, a in action.items():
             self._move_drone(drone, self.Action(a))
         observation = self._state()
-        reward = self._reward()
-        success = reward > 0
-        done = success or self._steps == self.max_steps
-        return observation, reward, done, {'success': success}
+
+        if potential:
+            reward, success = self._reward_individual()
+            done = success or self._steps == self.max_steps
+            return observation, reward, done, {'success': success}
+        else:
+            reward = self._reward()
+            success = reward > 0
+            done = success or self._steps == self.max_steps
+            return observation, reward, done, {'success': success}
 
     def _state(self):
         return [x.pos for x in self._drones.values()]
+    
+    def _compute_potential(self, masks):
+        """Compute the potential function: coverage - overlap."""
+        coverage = 0
+        overlap = 0
+        foi = self.foi.astype(int)
+        for i in self._drones:
+            coverage_i = np.sum(masks[i] & foi)
+            coverage += coverage_i
+            for j in self._drones:
+                if j != i:
+                    overlap += np.sum(masks[i] & masks[j] & foi)
+        return coverage - overlap
+    
+    def _reward_individual(self):
+        masks = self._view_masks()
+        potential = self._compute_potential(masks)
+        total_foi = np.sum(self.foi)
+        individual_rewards = {}
+        
+        for i in self._drones:
+            # Marginal contribution of agent i
+            masks_without_i = {j: masks[j] for j in self._drones if j != i}
+            potential_without_i = self._compute_potential(masks_without_i)
+            individual_rewards[i] = (potential - potential_without_i) / total_foi
+        
+        # Global success condition
+        success = (potential >= total_foi) and (self._compute_overlap(masks) == 0)
+        return individual_rewards, 1 if success else 0, success
+    
+    def _compute_overlap(self, masks):
+        """Compute total overlap between drones."""
+        overlap = 0
+        for i, j in combinations(self._drones, 2):
+            overlap += np.sum(masks[i] & masks[j] & self.foi)
+        return overlap
+    
+
 
     def _reward(self):
         masks = self._view_masks()

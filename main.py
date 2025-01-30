@@ -11,37 +11,10 @@ import shutil
 import os
 import time
 from time import perf_counter
+from util import generate_phi,save_coverage_snapshot
+
 
 solvers.options['show_progress'] = False
-
-
-def generate_phi(env_shape, action_space, n_drones):
-    X, Y, Z = env_shape
-    state_dim = (X + Y + Z) * n_drones
-
-    drone_actions = np.arange(action_space)
-    actions = {x: i for i, x in enumerate(product(*((drone_actions,) * n_drones)))}
-    def phi(S, A):
-        states = []
-        for i in range(n_drones):
-            x, y, z = S[i]
-            arr = np.zeros(X)
-            arr[x] = 1
-            states.append(arr)
-
-            arr = np.zeros(Y)
-            arr[y] = 1
-            states.append(arr)
-
-            arr = np.zeros(Z)
-            arr[z] = 1
-            states.append(arr)
-        states = np.concatenate(states)
-        state = np.zeros(len(states) * (action_space ** n_drones))
-        action_slot = actions[A] * len(states)
-        state[action_slot: action_slot + len(states)] = states
-        return state.astype(int).reshape(-1, 1)
-    return phi, state_dim * action_space ** n_drones
 
 
 def generate_pi(env_shape, action_space, n_drones):
@@ -81,7 +54,7 @@ def generate_pi(env_shape, action_space, n_drones):
                     action_ = tuple(x if j != i else a for j, x in enumerate(action))
                     # arr[i * action_space + action[i]] -= phi(S, action).T.dot(theta[i]) - phi(S, action_).T.dot(theta[i])
                     arr[i * action_space + action[i]] -= (
-                                                            phi(S, action).T.dot(theta[i]).item() - phi(S, action_).T.dot(theta[i]).item()
+                                                        phi(S, action).T.dot(theta[i]).item() - phi(S, action_).T.dot(theta[i]).item()
                                                         )
 
                 G.append(arr)
@@ -124,12 +97,12 @@ def main():
     parser.add_argument('--perturb_fov', default=None, nargs=2, metavar=('new_fov', 'episode'), help='Substitute original fov with new_fov at specific episode.')
     args = parser.parse_args()
 
-    if os.path.exists(args.output_dir):
-        if args.f:
-            shutil.rmtree(args.output_dir)
-        else:
-            raise FileExistsError(f'Output directory {args.output_dir} already exists.')
-    os.makedirs(args.output_dir)
+    # if os.path.exists(args.output_dir):
+    #     if args.f:
+    #         shutil.rmtree(args.output_dir)
+    #     else:
+    #         raise FileExistsError(f'Output directory {args.output_dir} already exists.')
+    os.makedirs(args.output_dir, exist_ok=True)
 
     np.random.seed(args.seed)
 
@@ -148,6 +121,7 @@ def main():
     episode_steps = np.zeros(args.n_episodes).astype(int)
     steps = 0
     t_start = perf_counter()
+    save_positions = []
     try:
         for episode in range(args.n_episodes):
             if args.perturb_foi is not None and episode == int(args.perturb_foi[1]):
@@ -161,8 +135,16 @@ def main():
             for k in range(args.episode_max_steps):
                 for i in range(args.n_drones):
                     epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
-                    pi_A = pi(phi, theta, state, eps=epsilon)
+                    pi_A = pi(phi, theta, state, eps=epsilon)  
                     next_state, reward, done, meta = env.step(pi_A)
+                    #### Plotting a few snapshots in the very last training episode
+                    if episode == args.n_episodes - 1:
+                        save_positions.append(next_state)
+                        snapshot_steps = [1, 10, 20, 30, 60]
+                        os.makedirs(args.output_dir, exist_ok=True)
+                        if (k+1) in snapshot_steps:
+                            save_coverage_snapshot(env, k+1, args.output_dir)
+
                     A = tuple([pi_A[drone] for drone in range(args.n_drones)])
                     actions = product(*((np.arange(action_space),) * args.n_drones))
                     q_next = np.max([phi(next_state, action).T.dot(theta[i]) for action in actions])
@@ -179,8 +161,12 @@ def main():
             print(f'Episode {episode}: {k + 1} steps, reward is {episode_rewards[episode]}')
     except KeyboardInterrupt:
         pass
-    tf = perf_counter()
-    final_time = tf - t_start
+    
+
+    trained_theta_path = os.path.join(args.output_dir, "trained_theta_baseline.npy")
+    np.save(trained_theta_path, theta)
+    print(f"Saved trained parameters to {trained_theta_path}")
+
     #####################################################
     plt.figure(dpi=150)
     plt.ylim(0, args.episode_max_steps)

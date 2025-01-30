@@ -58,23 +58,19 @@ class FieldCoverageEnv(gym.Env):
             self._move_drone(drone, self.Action(a))
         observation = self._state()
 
-         # Calculate coverage
+        # Calculate coverage
         masks = self._view_masks()
-        coverage = 0
-        foi = self.foi.astype(int)
-        for i in self._drones:
-            coverage += np.sum(masks[i] & foi)
-        coverage = coverage - self._compute_overlap(masks)
+        progress_score = self._compute_potential(masks)
         
         if potential:
             reward, global_reward, success = self._reward_individual()
             done = success or self._steps == self.max_steps
-            return observation, reward, global_reward, done, {'success': success, 'coverage': coverage}
+            return observation, reward, global_reward, done, {'success': success, 'progress': progress_score}
         else:
             reward = self._reward()
             success = reward > 0
             done = success or self._steps == self.max_steps
-            return observation, reward, done, {'success': success, 'coverage': coverage}
+            return observation, reward, done, {'success': success, 'progress': progress_score}
 
     def _state(self):
         return [x.pos for x in self._drones.values()]
@@ -102,7 +98,7 @@ class FieldCoverageEnv(gym.Env):
             # Marginal contribution of agent i
             masks_without_i = {j: masks[j] for j in self._drones if j != i}
             potential_without_i = self._compute_potential(masks_without_i)
-            individual_rewards[i] = (potential - potential_without_i) / total_foi
+            individual_rewards[i] = (potential - potential_without_i)
         
         # Global success condition
         success = (potential >= total_foi) and (self._compute_overlap(masks) == 0)

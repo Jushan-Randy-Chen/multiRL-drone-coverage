@@ -38,8 +38,6 @@ def save_coverage_snapshot(env, step_idx, output_dir):
     Example function that makes a 2D plot of the drones' coverage FOV
     and the FOI points, similar to your example figure.
     """
-
-
     plt.figure(figsize=(5,5))
     # Plot FOI points or region
     foi = env.foi
@@ -50,10 +48,14 @@ def save_coverage_snapshot(env, step_idx, output_dir):
 
     foi_points = np.argwhere(foi>0)  # indices where foi is > 0
     plt.scatter(foi_points[:,1], foi_points[:,0], marker='*', color='red')
+    
+    # print(f"DEBUG: Number of drones found = {len(env._drones)}")
 
     # Plot each drone’s bounding box for FOV
     for i, drone in env._drones.items():
         x, y, z = drone.pos
+        # print(x,y,z)
+        # print(f"DEBUG: Drone {i} position: (x={x}, y={y}, z={z})")
 
         # Simple “rectangle” approximation:
         # FOV in x-direction = tan(fov) * z

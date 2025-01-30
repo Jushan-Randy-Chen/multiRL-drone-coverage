@@ -53,9 +53,8 @@ def generate_pi(env_shape, action_space, n_drones):
                 for a in range(action_space):
                     action_ = tuple(x if j != i else a for j, x in enumerate(action))
                     # arr[i * action_space + action[i]] -= phi(S, action).T.dot(theta[i]) - phi(S, action_).T.dot(theta[i])
-                    arr[i * action_space + action[i]] -= (
-                                                        phi(S, action).T.dot(theta[i]).item() - phi(S, action_).T.dot(theta[i]).item()
-                                                        )
+                    arr[i * action_space + action[i]] -= phi(S, action).T.dot(theta[i]).item() - phi(S, action_).T.dot(theta[i]).item()
+                                                        
 
                 G.append(arr)
                 h.append(0)
@@ -88,7 +87,7 @@ def main():
     parser.add_argument('--gamma', default=0.9, type=float, help='Discount factor.')
     parser.add_argument('--lr', default=0.1, type=float, help='Learning rate.')
     parser.add_argument('--n_episodes', default=500, type=int, help='Number of episodes to simulate.')
-    parser.add_argument('--episode_max_steps', default=2000, type=int, help='Maximum number of steps per episode.')
+    parser.add_argument('--episode_max_steps', default=10000, type=int, help='Maximum number of steps per episode.')
     parser.add_argument('--max_eps', default=0.95, type=float, help='Max epsilon for epsilon-greedy policy.')
     parser.add_argument('--min_eps', default=0.05, type=float, help='Min epsilon for epsilon-greedy policy.')
     parser.add_argument('--eps_decay', default=10000, type=float, help='Epsilon decay rate for epsilon-greedy policy.')
@@ -120,8 +119,7 @@ def main():
     episode_rewards = np.zeros(args.n_episodes)
     episode_steps = np.zeros(args.n_episodes).astype(int)
     steps = 0
-    t_start = perf_counter()
-    save_positions = []
+
     try:
         for episode in range(args.n_episodes):
             if args.perturb_foi is not None and episode == int(args.perturb_foi[1]):
@@ -133,17 +131,16 @@ def main():
             state = env.reset()
             done = False
             for k in range(args.episode_max_steps):
+                #### Plotting a few snapshots in the very last training episode
+                if episode == args.n_episodes - 1:
+                    snapshot_steps = [1, 2, 3, 4, 5, 6, 7, 8]
+                    os.makedirs(args.output_dir, exist_ok=True)
+                    if (k+1) in snapshot_steps:
+                        save_coverage_snapshot(env, k+1, args.output_dir)
                 for i in range(args.n_drones):
                     epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
                     pi_A = pi(phi, theta, state, eps=epsilon)  
                     next_state, reward, done, meta = env.step(pi_A)
-                    #### Plotting a few snapshots in the very last training episode
-                    if episode == args.n_episodes - 1:
-                        save_positions.append(next_state)
-                        snapshot_steps = [1, 10, 20, 30, 60]
-                        os.makedirs(args.output_dir, exist_ok=True)
-                        if (k+1) in snapshot_steps:
-                            save_coverage_snapshot(env, k+1, args.output_dir)
 
                     A = tuple([pi_A[drone] for drone in range(args.n_drones)])
                     actions = product(*((np.arange(action_space),) * args.n_drones))

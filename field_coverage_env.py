@@ -62,15 +62,10 @@ class FieldCoverageEnv(gym.Env):
         masks = self._view_masks()
         progress_score = self._compute_potential(masks)
         
-        if potential:
-            reward, global_reward, success = self._reward_individual()
-            done = success or self._steps == self.max_steps
-            return observation, reward, global_reward, done, {'success': success, 'progress': progress_score}
-        else:
-            reward = self._reward()
-            success = reward > 0
-            done = success or self._steps == self.max_steps
-            return observation, reward, done, {'success': success, 'progress': progress_score}
+        reward = self._reward()
+        success = reward > 0
+        done = success or self._steps == self.max_steps
+        return observation, reward, done, {'success': success, 'progress': progress_score}
 
     def _state(self):
         return [x.pos for x in self._drones.values()]

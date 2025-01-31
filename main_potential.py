@@ -68,10 +68,9 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
 
         for t in range(max_steps):
             if ep == n_episodes - 1:
-                snapshot_steps = [1, 5, 10, 20, 30, 40, 50]
                 os.makedirs(args.output_dir, exist_ok=True)
-                if t in snapshot_steps:
-                    save_coverage_snapshot(env, t, args.output_dir)
+                # if (t+1) in snapshot_steps:
+                save_coverage_snapshot(env, t+1, args.output_dir)
             steps_done += 1
             epsilon = get_epsilon(steps_done)
 
@@ -124,7 +123,7 @@ def main():
     parser.add_argument('foi', type=str, help='File containing FOI data.')
     parser.add_argument('output_dir', type=str, help='Output directory.')
     parser.add_argument('-f', action='store_true', help='Overwrite output directory if it already exists.')
-    parser.add_argument('--fov', type=float, default=np.radians(25), help='Drone field of vision.')
+    parser.add_argument('--fov', type=float, default=np.radians(30), help='Drone field of vision.')
     parser.add_argument('--env_dim', default=None, nargs=3, type=int,
                         metavar=('X', 'Y', 'Z'),
                         help='Environment dimensions. Inferred from FOI if not specified.')

@@ -122,21 +122,19 @@ def main():
 
     try:
         for episode in range(args.n_episodes):
-            if args.perturb_foi is not None and episode == int(args.perturb_foi[1]):
-                print('FOI perturbation applied.')
-                env.foi = np.genfromtxt(args.perturb_foi[0], delimiter=',')
-            if args.perturb_fov is not None and episode == int(args.perturb_fov[1]):
-                print('FOV perturbation applied.')
-                env.fov = float(args.perturb_fov[0])
+            # if args.perturb_foi is not None and episode == int(args.perturb_foi[1]):
+            #     print('FOI perturbation applied.')
+            #     env.foi = np.genfromtxt(args.perturb_foi[0], delimiter=',')
+            # if args.perturb_fov is not None and episode == int(args.perturb_fov[1]):
+            #     print('FOV perturbation applied.')
+            #     env.fov = float(args.perturb_fov[0])
             state = env.reset()
             done = False
             for k in range(args.episode_max_steps):
                 #### Plotting a few snapshots in the very last training episode
                 if episode == args.n_episodes - 1:
-                    snapshot_steps = [1, 2, 3, 4, 5, 6, 7, 8]
                     os.makedirs(args.output_dir, exist_ok=True)
-                    if (k+1) in snapshot_steps:
-                        save_coverage_snapshot(env, k+1, args.output_dir)
+                    save_coverage_snapshot(env, k+1, args.output_dir)
                 for i in range(args.n_drones):
                     epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
                     pi_A = pi(phi, theta, state, eps=epsilon)  

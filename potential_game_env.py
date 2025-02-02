@@ -1,6 +1,7 @@
 import numpy as np
-from itertools import product
+from itertools import product, combinations
 import gym
+from math import factorial
 
 class PotentialGameEnv(gym.Env):
     """
@@ -62,22 +63,64 @@ class PotentialGameEnv(gym.Env):
         next_obs = np.array(next_obs_list, dtype=np.float32)
         return next_obs, reward, done, info
 
+    # def _compute_potential(self):
+    #     """
+    #     Use coverage minus overlap as the potential function.
+    #     This is the same logic as FieldCoverageEnv._compute_potential(...).
+    #     """
+    #     n_drones = self.n_drones
+
+    #     masks = self.env._view_masks()
+    #     coverage, overlap, correction_term = 0, 0, 0
+    #     foi = self.env.foi.astype(int)
+
+    #     for i in masks:
+    #         coverage += np.sum(masks[i] & foi)
+    #         for j in masks:
+    #             if j != i:
+    #                 overlap += np.sum(masks[i] & masks[j] & foi)
+    #                 correctoin_term += (-1)**(n_drones)*factorial(n_drones-1)*overlap
+
+    #     return coverage - overlap + correctoin_term
+
     def _compute_potential(self):
         """
-        Use coverage minus overlap as the potential function.
-        This is the same logic as FieldCoverageEnv._compute_potential(...).
+        Compute the global potential (coverage) using the inclusion–exclusion principle.
+
+        For a set S of drones, let φ_S be the total area (or count) where the mask
+        for each drone in S and the field-of-interest (foi) are simultaneously True.
+        
+        Then the potential is:
+        
+          J = ∑_{k=1}^{n_drones} ∑_{S ⊆ {1,…,n_drones}, |S|=k} [(-1)^(k-1) * (k-1)! * φ_S]
+        
+        For example, with three drones, this computes:
+          J = f1 + f2 + f3 - (o12 + o13 + o23) + 2 * o123
+
         """
-        masks = self.env._view_masks()
-        coverage, overlap = 0, 0
-        foi = self.env.foi.astype(int)
+        n_drones = self.n_drones
+        # Assume self.env._view_masks() returns a dictionary mapping drone indices
+        # to a boolean numpy array (mask) indicating coverage.
+        masks = self.env._view_masks()  
+        # Convert the field-of-interest to a boolean mask
+        foi = self.env.foi.astype(bool)
+        
+        potential = 0
+        # Loop over all nonempty subsets of drones (using combinations).
+        for k in range(1, n_drones + 1):
+            for subset in combinations(range(n_drones), k):
+                # Start with the FOI mask; restrict it with each drone's mask in the subset.
+                inter = foi.copy()
+                for i in subset:
+                    inter = np.logical_and(inter, masks[i])
+                # φ_S is the "area" (or count) of the intersection.
+                phi_S = np.sum(inter)
+                # Coefficient as per the inclusion–exclusion formula.
+                coefficient = ((-1)**(k-1)) * factorial(k-1)
+                potential += coefficient * phi_S
+        return potential
 
-        for i in masks:
-            coverage += np.sum(masks[i] & foi)
-            for j in masks:
-                if j != i:
-                    overlap += np.sum(masks[i] & masks[j] & foi)
 
-        return coverage - overlap
 
 
 def generate_phi(env_shape, action_space, n_drones):

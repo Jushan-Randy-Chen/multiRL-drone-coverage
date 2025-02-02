@@ -153,7 +153,7 @@ def main():
                 steps += 1
                 if done:
                     break
-            print(f'Episode {episode}: {k + 1} steps, reward is {episode_rewards[episode]}')
+            print(f'Episode {episode}: {k + 1} steps, Episode reward is {episode_rewards[episode]}')
     except KeyboardInterrupt:
         pass
     

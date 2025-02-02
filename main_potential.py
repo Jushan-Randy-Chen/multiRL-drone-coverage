@@ -11,6 +11,7 @@ from field_coverage_env import FieldCoverageEnv
 from potential_game_env import generate_phi, PotentialGameEnv
 import argparse
 from util import save_coverage_snapshot
+from time import perf_counter
 
 
 def q_learning_potential_fa(args, env, phi_func, actions_dict,
@@ -59,12 +60,13 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
         return eps_min + (eps_max - eps_min) * math.exp(-1.0 * t / eps_decay)
 
     episode_rewards = []
-
+    durations = []
     # 4) Main training loop
     for ep in range(n_episodes):
         # Check if we need to perturb FOI or FOV at the start of this episode
         obs = env.reset()  # shape (n_drones,3)
-        ep_reward = 0.0
+        ep_reward = 0.0 
+        t_start  = perf_counter()
 
         for t in range(max_steps):
             if ep == n_episodes - 1:
@@ -111,9 +113,13 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
             obs = next_obs
             if done:
                 break
+        tf = perf_counter()
+        duration = tf-t_start
+        durations.append(duration)
 
         episode_rewards.append(ep_reward)
-        print(f"[Ep {ep}] steps:{t+1}  sumReward:{ep_reward:.2f}  eps:{epsilon:.3f}")
+
+        print(f"[Ep {ep}] steps:{t+1}  sumReward:{ep_reward:.2f}  eps:{epsilon:.3f}  duration for episode:{duration:.2f}")
 
     return theta, episode_rewards
 

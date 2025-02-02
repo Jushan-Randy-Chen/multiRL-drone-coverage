@@ -53,7 +53,7 @@ class PotentialGameEnv(gym.Env):
         #    (We'll ignore its built-in 'reward' or 'global_reward'—instead we use potential.)
         next_obs_list, _, done, info = self.env.step(action_dict)
         
-        # 3) Compute the new potential, and define reward = Δ potential
+        # 3) Compute the new potential, and define reward = Δ potential !!!!
         new_potential = self._compute_potential()
         reward = new_potential - self._last_potential
         self._last_potential = new_potential
@@ -78,44 +78,6 @@ class PotentialGameEnv(gym.Env):
     #                 overlap += np.sum(masks[i] & masks[j] & foi)
 
     #     return coverage - overlap
-
-    # def _compute_potential(self):
-    #     """
-    #     Compute the global potential (coverage) using the inclusion–exclusion principle.
-
-    #     For a set S of drones, let φ_S be the total area (or count) where the mask
-    #     for each drone in S and the field-of-interest (foi) are simultaneously True.
-        
-    #     Then the potential is:
-        
-    #       J = ∑_{k=1}^{n_drones} ∑_{S ⊆ {1,…,n_drones}, |S|=k} [(-1)^(k-1) * (k-1)! * φ_S]
-        
-    #     For example, with three drones, this computes:
-    #       J = f1 + f2 + f3 - (o12 + o13 + o23) + 2 * o123
-
-    #     """
-    #     n_drones = self.n_drones
-    #     # Assume self.env._view_masks() returns a dictionary mapping drone indices
-    #     # to a boolean numpy array (mask) indicating coverage.
-    #     masks = self.env._view_masks()  
-    #     # Convert the field-of-interest to a boolean mask
-    #     foi = self.env.foi.astype(bool)
-        
-    #     potential = 0
-    #     # Loop over all nonempty subsets of drones (using combinations).
-    #     for k in range(1, n_drones + 1):
-    #         for subset in combinations(range(n_drones), k):
-    #             # Start with the FOI mask; restrict it with each drone's mask in the subset.
-    #             inter = foi.copy()
-    #             for i in subset:
-    #                 inter = np.logical_and(inter, masks[i])
-    #             # φ_S is the "area" (or count) of the intersection.
-    #             phi_S = np.sum(inter)
-    #             # Coefficient as per the inclusion–exclusion formula.
-    #             coefficient = ((-1)**(k-1)) * factorial(k-1)
-    #             potential += coefficient * phi_S
-
-    #     return potential
 
     def _compute_potential(self):
         """

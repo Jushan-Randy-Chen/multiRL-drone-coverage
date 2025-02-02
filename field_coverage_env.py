@@ -52,14 +52,11 @@ class FieldCoverageEnv(gym.Env):
         self._drones = drones
         return self._state()
 
-    def step(self, action,):
+    def step(self, action):
         assert len(action) == len(self._drones), 'Joint action must be defined for each agent.'
         for drone, a in action.items():
             self._move_drone(drone, self.Action(a))
         observation = self._state()
-
-        # Calculate coverage
-        masks = self._view_masks()
         
         reward = self._reward()
         success = reward > 0

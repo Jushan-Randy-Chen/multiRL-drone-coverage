@@ -53,7 +53,8 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
     env.reset()
 
     theta = np.zeros(phi_dim, dtype=np.float64)
-
+    convergence_threshold = 0.001
+    theta_prev = theta.copy()
     # 3) Epsilon decay function
     steps_done = 0
     def get_epsilon(t):
@@ -62,16 +63,20 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
     episode_rewards = []
     durations = []
     # 4) Main training loop
+    rel_diff = np.inf
+    converge_ep = np.inf
     for ep in range(n_episodes):
         # Check if we need to perturb FOI or FOV at the start of this episode
         obs = env.reset()  # shape (n_drones,3)
         ep_reward = 0.0 
         t_start  = perf_counter()
-
+        
         for t in range(max_steps):
-            if ep == n_episodes - 1:
-                os.makedirs(args.output_dir, exist_ok=True)
-                # if (t+1) in snapshot_steps:
+            # if ep == n_episodes - 1:
+            #     os.makedirs(args.output_dir, exist_ok=True)
+            #     # if (t+1) in snapshot_steps:
+            #     save_coverage_snapshot(env, t+1, args.output_dir)
+            if ep == converge_ep + 1:
                 save_coverage_snapshot(env, t+1, args.output_dir)
             steps_done += 1
             epsilon = get_epsilon(steps_done)
@@ -91,8 +96,8 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
 
             # Step environment
             next_obs, reward, done, info = env.step(action_idx)
-            ep_reward += reward
-
+            ep_reward += reward #>>> Our immediate reward here is the potential difference J(s')-J(s)
+            
             # Next Q max
             next_qvals = []
             for action_idx2 in range(env.action_space.n):
@@ -110,9 +115,10 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
             # Update
             theta += alpha * td_error * phi_sa_chosen
 
-            obs = next_obs
+            obs = next_obs  
             if done:
                 break
+
         tf = perf_counter()
         duration = tf-t_start
         durations.append(duration)
@@ -120,6 +126,19 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
         episode_rewards.append(ep_reward)
 
         print(f"[Ep {ep}] steps:{t+1}  sumReward:{ep_reward:.2f}  eps:{epsilon:.3f}  duration for episode:{duration:.2f}")
+
+        rel_diff = np.linalg.norm(theta_prev - theta) / np.linalg.norm(theta)
+        print(f'Theta difference is {rel_diff}')
+        if rel_diff <= convergence_threshold:
+            print(f'Convergence threshold met at the {ep}th episode! Stopped training!')
+            converge_ep = ep
+            # break
+
+        if ep == converge_ep + 1:
+            break
+
+        theta_prev = theta.copy()
+
 
     return theta, episode_rewards, durations
 
@@ -137,7 +156,7 @@ def main():
     parser.add_argument('--gamma', default=0.9, type=float, help='Discount factor.')
     parser.add_argument('--lr', default=0.1, type=float, help='Learning rate.')
     parser.add_argument('--n_episodes', default=500, type=int, help='Number of episodes to simulate.')
-    parser.add_argument('--episode_max_steps', default=10000, type=int, help='Maximum number of steps per episode.')
+    parser.add_argument('--episode_max_steps', default=2000, type=int, help='Maximum number of steps per episode.')
     parser.add_argument('--max_eps', default=0.95, type=float, help='Max epsilon for epsilon-greedy policy.')
     parser.add_argument('--min_eps', default=0.05, type=float, help='Min epsilon for epsilon-greedy policy.')
     parser.add_argument('--eps_decay', default=10000, type=float, help='Epsilon decay rate.')

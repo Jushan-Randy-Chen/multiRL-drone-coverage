@@ -119,17 +119,13 @@ def main():
     episode_rewards = np.zeros(args.n_episodes)
     episode_steps = np.zeros(args.n_episodes).astype(int)
     steps = 0
+    durations = []
 
     try:
         for episode in range(args.n_episodes):
-            # if args.perturb_foi is not None and episode == int(args.perturb_foi[1]):
-            #     print('FOI perturbation applied.')
-            #     env.foi = np.genfromtxt(args.perturb_foi[0], delimiter=',')
-            # if args.perturb_fov is not None and episode == int(args.perturb_fov[1]):
-            #     print('FOV perturbation applied.')
-            #     env.fov = float(args.perturb_fov[0])
             state = env.reset()
             done = False
+            t_start = perf_counter()
             for k in range(args.episode_max_steps):
                 #### Plotting a few snapshots in the very last training episode
                 if episode == args.n_episodes - 1:
@@ -153,7 +149,10 @@ def main():
                 steps += 1
                 if done:
                     break
-            print(f'Episode {episode}: {k + 1} steps, Episode reward is {episode_rewards[episode]}')
+            tf = perf_counter()
+            duration = tf-t_start
+            durations.append(duration)
+            print(f'Episode {episode}: {k + 1} steps, Episode reward is {episode_rewards[episode]}, duration is {duration} s')
     except KeyboardInterrupt:
         pass
     
@@ -163,16 +162,21 @@ def main():
     print(f"Saved trained parameters to {trained_theta_path}")
 
     #####################################################
-    plt.figure(dpi=150)
-    plt.ylim(0, args.episode_max_steps)
-    plt.plot(episode_steps)
-    plt.savefig(os.path.join(args.output_dir, 'episode_steps.png'))
-    pickle.dump(episode_steps, open(os.path.join(args.output_dir, 'episode_steps.pkl'), 'wb'))
-    
     # plt.figure(dpi=150)
-    # plt.plot(episode_rewards)
-    # plt.savefig(os.path.join(args.output_dir, 'episode_rewards.png'))
-    # pickle.dump(episode_rewards, open(os.path.join(args.output_dir, 'episode_rewards.pkl'), 'wb'))
+    # plt.ylim(0, args.episode_max_steps)
+    # plt.plot(episode_steps)
+    # plt.savefig(os.path.join(args.output_dir, 'episode_steps.png'))
+    # pickle.dump(episode_steps, open(os.path.join(args.output_dir, 'episode_steps.pkl'), 'wb'))
+    
+    plt.figure(dpi=150)
+    plt.plot(durations, label='Duration per episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Durations')
+    plt.legend()
+    plt.savefig(os.path.join(args.output_dir, 'episode_durations.png'))
+    print(f"Training complete. Plots and data saved in {args.output_dir}.")
+
+
 
 
 

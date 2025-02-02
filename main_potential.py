@@ -121,7 +121,7 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
 
         print(f"[Ep {ep}] steps:{t+1}  sumReward:{ep_reward:.2f}  eps:{epsilon:.3f}  duration for episode:{duration:.2f}")
 
-    return theta, episode_rewards
+    return theta, episode_rewards, durations
 
 
 def main():
@@ -191,7 +191,7 @@ def main():
     actions_dict = {joint: i for i, joint in enumerate(all_joint)}
 
     # 6) Train with single-agent Q-learning + linear function approximation
-    theta, episode_rewards = q_learning_potential_fa(args,
+    theta, episode_rewards, durations = q_learning_potential_fa(args,
                                                     env=single_env,
                                                     phi_func=phi_func,
                                                     actions_dict=actions_dict,
@@ -215,6 +215,13 @@ def main():
     plt.ylabel('Reward')
     plt.legend()
     plt.savefig(os.path.join(args.output_dir, 'episode_rewards.png'))
+
+    plt.figure(dpi=150)
+    plt.plot(durations, label='Duration per episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Durations')
+    plt.legend()
+    plt.savefig(os.path.join(args.output_dir, 'episode_durations.png'))
     print(f"Training complete. Plots and data saved in {args.output_dir}.")
 
 

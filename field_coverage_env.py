@@ -60,44 +60,40 @@ class FieldCoverageEnv(gym.Env):
 
         # Calculate coverage
         masks = self._view_masks()
-        progress_score = self._compute_potential(masks)
         
         reward = self._reward()
         success = reward > 0
         done = success or self._steps == self.max_steps
-        return observation, reward, done, {'success': success, 'progress': progress_score}
+        return observation, reward, done, {'success': success}
+
+    def step_individual(self, action):
+        """
+        Expects action to be a dict mapping each drone's index to an action.
+        """
+        # Apply each drone's action.
+        assert len(action) == len(self._drones), 'Joint action must be defined for each agent.'
+        for drone, a in action.items():
+            self._move_drone(drone, self.Action(a))
+        
+        # Compute the new state.
+        observation = self._state()
+        
+        # Compute individual rewards.
+        # (Make sure _reward_individual() returns a dictionary {drone_index: reward}.)
+        rewards = self._reward_individual()
+        
+        # Increment steps and determine if episode is done.
+        self._steps += 1
+        # (You can choose your done condition. For example, you might stop if all FOI cells are covered.)
+        done = (self._steps >= self.max_steps)
+        meta = {'success':done}  # Optional extra info
+        
+        # Return: observation, rewards (a dict), done flag, and meta-data.
+        return observation, rewards, done, meta
+
 
     def _state(self):
         return [x.pos for x in self._drones.values()]
-    
-    def _compute_potential(self, masks):
-        """Compute the potential function: coverage - overlap."""
-        coverage = 0
-        overlap = 0
-        foi = self.foi.astype(int)
-        for i in masks:  # Only iterate over keys present in the masks dictionary
-            coverage_i = np.sum(masks[i] & foi)
-            coverage += coverage_i
-            for j in masks:
-                if j != i:
-                    overlap += np.sum(masks[i] & masks[j] & foi)
-        return coverage - overlap
-    
-    def _reward_individual(self):
-        masks = self._view_masks()
-        potential = self._compute_potential(masks)
-        total_foi = np.sum(self.foi)
-        individual_rewards = {}
-        
-        for i in self._drones:
-            # Marginal contribution of agent i
-            masks_without_i = {j: masks[j] for j in self._drones if j != i}
-            potential_without_i = self._compute_potential(masks_without_i)
-            individual_rewards[i] = (potential - potential_without_i)
-        
-        # Global success condition
-        success = (potential >= total_foi) and (self._compute_overlap(masks) == 0)
-        return individual_rewards, 1 if success else 0, success
     
     def _compute_overlap(self, masks):
         """Compute total overlap between drones."""
@@ -125,6 +121,43 @@ class FieldCoverageEnv(gym.Env):
         if coverage == sum(foi.flatten()) and overlap == 0:
             return 1
         return 0
+    
+    def _reward_individual(self):
+        """
+        Computes individual rewards for each agent.
+        
+        For each agent i:
+        - f_i = number of FOI cells covered by agent i (i.e. mask_i ∧ FOI)
+        - overlap_i = number of FOI cells that are in agent i’s mask
+                        and also in the union of all other agents’ masks
+        - r_i = f_i - overlap_i
+        
+        In effect, an agent only receives credit for its uniquely covered area.
+        Returns:
+        A dictionary mapping each drone's index to its reward.
+        """
+        masks = self._view_masks()
+        foi_bool = self.foi.astype(bool)
+        rewards = {}
+        
+        for i in self._drones.keys():
+            # Agent i's own coverage within the field of interest.
+            f_i = np.sum(masks[i] & foi_bool)
+            
+            # Compute the union of all other agents' masks.
+            other_union = np.zeros_like(foi_bool, dtype=bool)
+            for j in self._drones.keys():
+                if j != i:
+                    other_union = other_union | masks[j]
+                    
+            # Overlap: cells that agent i covers which are also covered by at least one other agent.
+            overlap_i = np.sum(masks[i] & other_union & foi_bool)
+            
+            # The individual reward for agent i.
+            rewards[i] = f_i - overlap_i
+            
+        return rewards
+
 
 
     def _view_masks(self):

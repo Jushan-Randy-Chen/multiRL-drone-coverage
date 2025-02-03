@@ -31,7 +31,8 @@ class PotentialGameEnv(gym.Env):
         low  = np.zeros((self.n_drones, 3), dtype=np.float32)
         high = np.array([X, Y, Z], dtype=np.float32)
         high = np.tile(high, (self.n_drones,1))
-        self.observation_space = gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        # self.observation_space = gym.spaces.Box(low=low, high=high, dtype=np.float32)
+        self.observation_space = gym.spaces.Box(low=0, high=np.array(self.env.shape), dtype=np.float32)
 
         # Track last potential so we can give the incremental reward
         self._last_potential = None

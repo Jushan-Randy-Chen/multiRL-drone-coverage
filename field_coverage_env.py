@@ -63,30 +63,30 @@ class FieldCoverageEnv(gym.Env):
         done = success or self._steps == self.max_steps
         return observation, reward, done, {'success': success}
 
-    def step_individual(self, action):
-        """
-        Expects action to be a dict mapping each drone's index to an action.
-        """
-        # Apply each drone's action.
-        assert len(action) == len(self._drones), 'Joint action must be defined for each agent.'
-        for drone, a in action.items():
-            self._move_drone(drone, self.Action(a))
+    # def step_individual(self, action):
+    #     """
+    #     Expects action to be a dict mapping each drone's index to an action.
+    #     """
+    #     # Apply each drone's action.
+    #     assert len(action) == len(self._drones), 'Joint action must be defined for each agent.'
+    #     for drone, a in action.items():
+    #         self._move_drone(drone, self.Action(a))
         
-        # Compute the new state.
-        observation = self._state()
+    #     # Compute the new state.
+    #     observation = self._state()
         
-        # Compute individual rewards.
-        # (Make sure _reward_individual() returns a dictionary {drone_index: reward}.)
-        rewards = self._reward_individual()
+    #     # Compute individual rewards.
+    #     # (Make sure _reward_individual() returns a dictionary {drone_index: reward}.)
+    #     rewards = self._reward_individual()
         
-        # Increment steps and determine if episode is done.
-        self._steps += 1
-        # (You can choose your done condition. For example, you might stop if all FOI cells are covered.)
-        done = (self._steps >= self.max_steps)
-        meta = {'success':done}  # Optional extra info
+    #     # Increment steps and determine if episode is done.
+    #     self._steps += 1
+    #     # (You can choose your done condition. For example, you might stop if all FOI cells are covered.)
+    #     done = (self._steps >= self.max_steps)
+    #     meta = {'success':done}  # Optional extra info
         
-        # Return: observation, rewards (a dict), done flag, and meta-data.
-        return observation, rewards, done, meta
+    #     # Return: observation, rewards (a dict), done flag, and meta-data.
+    #     return observation, rewards, done, meta
 
 
     def _state(self):

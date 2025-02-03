@@ -66,7 +66,6 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
     rel_diff = np.inf
     converge_ep = np.inf
     for ep in range(n_episodes):
-        # Check if we need to perturb FOI or FOV at the start of this episode
         obs = env.reset()  # shape (n_drones,3)
         ep_reward = 0.0 
         t_start  = perf_counter()

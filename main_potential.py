@@ -16,7 +16,7 @@ from time import perf_counter
 
 def q_learning_potential_fa(args, env, phi_func, actions_dict,
                             n_episodes=500,
-                            max_steps=10000,
+                            max_steps=2000,
                             gamma=0.9,
                             alpha=0.1,
                             eps_max=0.95,
@@ -64,20 +64,19 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
     durations = []
     # 4) Main training loop
     rel_diff = np.inf
-    converge_ep = np.inf
+    # converge_ep = np.inf
     for ep in range(n_episodes):
         obs = env.reset()  # shape (n_drones,3)
         ep_reward = 0.0 
         t_start  = perf_counter()
         
         for t in range(max_steps):
-            # if ep == n_episodes - 1:
-            #     os.makedirs(args.output_dir, exist_ok=True)
-            #     # if (t+1) in snapshot_steps:
-            #     save_coverage_snapshot(env, t+1, args.output_dir)
-            if ep == converge_ep + 1:
+            if ep == n_episodes - 1:
+                os.makedirs(args.output_dir, exist_ok=True)
                 save_coverage_snapshot(env, t+1, args.output_dir)
-            steps_done += 1
+            # if ep == converge_ep + 1:
+            #     save_coverage_snapshot(env, t+1, args.output_dir)
+       
             epsilon = get_epsilon(steps_done)
 
             # Compute Q-values for all possible actions
@@ -115,6 +114,7 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
             theta += alpha * td_error * phi_sa_chosen
 
             obs = next_obs  
+            steps_done += 1
             if done:
                 break
 
@@ -128,13 +128,13 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
 
         rel_diff = np.linalg.norm(theta_prev - theta) / np.linalg.norm(theta)
         print(f'Theta difference is {rel_diff}')
-        if rel_diff <= convergence_threshold:
-            print(f'Convergence threshold met at the {ep}th episode! Stopped training!')
-            converge_ep = ep
+        # if rel_diff <= convergence_threshold:
+            # print(f'Convergence threshold met at the {ep}th episode! Stopped training!')
+            # converge_ep = ep
             # break
 
-        if ep == converge_ep + 1:
-            break
+        # if ep == converge_ep + 1:
+        #     break
 
         theta_prev = theta.copy()
 

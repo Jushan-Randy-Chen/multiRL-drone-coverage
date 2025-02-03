@@ -10,9 +10,8 @@ from itertools import product
 from field_coverage_env import FieldCoverageEnv
 from potential_game_env import generate_phi, PotentialGameEnv
 import argparse
-from util import save_coverage_snapshot
+from util import save_coverage_snapshot, generate_phi_rbf
 from time import perf_counter
-
 
 def q_learning_potential_fa(args, env, phi_func, actions_dict,
                             n_episodes=500,
@@ -47,8 +46,35 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
     #    plus the first action.
     init_state = env.reset()
     init_tuple = all_actions[0]  # e.g. (0,0,...)
-    phi_sample = phi_func(init_state, init_tuple)
-    phi_dim = phi_sample.size
+
+    if args.n_drones <=2:
+        phi_sample = phi_func(init_state, init_tuple)
+        phi_dim = phi_sample.size
+        print(phi_dim)
+    else:
+        num_centers = 6
+        rbf_centers = []
+        n_drones = 3
+        X, Y, Z = env.env.shape
+        for _ in range(num_centers):
+            # Each drone i: (x_i,y_i,z_i)
+            # Flatten them in order => (x0,y0,z0, x1,y1,z1, x2,y2,z2)
+            center = []
+            for i in range(n_drones):
+                cx = np.random.uniform(0, X-1)  # in [0..X-1]
+                cy = np.random.uniform(0, Y-1)  # in [0..Y-1]
+                cz = np.random.uniform(1,  Z  ) # in [1..Z]
+                center.extend([cx, cy, cz])
+            rbf_centers.append(center)
+
+        rbf_centers = np.array(rbf_centers)  # shape: (50, 3*n_drones)
+        phi, phi_dim = generate_phi_rbf(env.env.shape, 
+                                        env.action_space.n,
+                                        args.n_drones, 
+                                        rbf_centers, 
+                                        mu=5)
+        print(phi_dim)
+
     # reset env again to start fresh
     env.reset()
 

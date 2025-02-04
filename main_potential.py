@@ -50,7 +50,6 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
     if args.n_drones <=2:
         phi_sample = phi_func(init_state, init_tuple)
         phi_dim = phi_sample.size
-        print(phi_dim)
     else:
         num_centers = 6
         rbf_centers = []
@@ -73,7 +72,6 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
                                         args.n_drones, 
                                         rbf_centers, 
                                         mu=5)
-        print(phi_dim)
 
     # reset env again to start fresh
     env.reset()
@@ -154,13 +152,6 @@ def q_learning_potential_fa(args, env, phi_func, actions_dict,
 
         rel_diff = np.linalg.norm(theta_prev - theta) / np.linalg.norm(theta)
         print(f'Theta difference is {rel_diff}')
-        # if rel_diff <= convergence_threshold:
-            # print(f'Convergence threshold met at the {ep}th episode! Stopped training!')
-            # converge_ep = ep
-            # break
-
-        # if ep == converge_ep + 1:
-        #     break
 
         theta_prev = theta.copy()
 

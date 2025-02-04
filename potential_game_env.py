@@ -64,22 +64,6 @@ class PotentialGameEnv(gym.Env):
         next_obs = np.array(next_obs_list, dtype=np.float32)
         return next_obs, reward, done, info
 
-    # def _compute_potential(self):
-    #     """
-    #     Use coverage minus overlap as the potential function.
-    #     This is the same logic as FieldCoverageEnv._compute_potential(...).
-    #     """
-    #     masks = self.env._view_masks()
-    #     coverage, overlap = 0, 0
-    #     foi = self.env.foi.astype(int)
-    #     for i in masks:
-    #         coverage += np.sum(masks[i] & foi)
-    #         for j in masks:
-    #             if j != i:
-    #                 overlap += np.sum(masks[i] & masks[j] & foi)
-
-    #     return coverage - overlap
-
     def _compute_potential(self):
         """
         Compute the global potential (coverage) using the inclusion–exclusion principle.

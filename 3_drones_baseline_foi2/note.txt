@@ -1,0 +1,1 @@
+Way too slow! the first episode took all 2000 steps (max allowed) and took 263 seconds in wall time!!! crazy

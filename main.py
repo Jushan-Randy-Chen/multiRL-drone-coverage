@@ -111,28 +111,28 @@ def main():
     env = FieldCoverageEnv(env_dim, foi=foi, fov=args.fov, n_drones=args.n_drones)
     action_space = env.action_space.n
 
-    if args.n_drones <=2:
-        phi, phi_dim = generate_phi(env_dim, action_space, args.n_drones)
-        print(phi_dim)
-    else:
-        num_centers = 10
-        rbf_centers = []
-        n_drones = 3
-        X, Y, Z = env.shape
-        for _ in range(num_centers):
-            # Each drone i: (x_i,y_i,z_i)
-            # Flatten them in order => (x0,y0,z0, x1,y1,z1, x2,y2,z2)
-            center = []
-            for i in range(n_drones):
-                cx = np.random.uniform(0, X-1)  # in [0..X-1]
-                cy = np.random.uniform(0, Y-1)  # in [0..Y-1]
-                cz = np.random.uniform(1,  Z  ) # in [1..Z]
-                center.extend([cx, cy, cz])
-            rbf_centers.append(center)
+    # if args.n_drones <=2:
+    phi, phi_dim = generate_phi(env_dim, action_space, args.n_drones)
+    print(phi_dim)
+    # else:
+    #     num_centers = 10
+    #     rbf_centers = []
+    #     n_drones = 3
+    #     X, Y, Z = env.shape
+    #     for _ in range(num_centers):
+    #         # Each drone i: (x_i,y_i,z_i)
+    #         # Flatten them in order => (x0,y0,z0, x1,y1,z1, x2,y2,z2)
+    #         center = []
+    #         for i in range(n_drones):
+    #             cx = np.random.uniform(0, X-1)  # in [0..X-1]
+    #             cy = np.random.uniform(0, Y-1)  # in [0..Y-1]
+    #             cz = np.random.uniform(1,  Z  ) # in [1..Z]
+    #             center.extend([cx, cy, cz])
+    #         rbf_centers.append(center)
 
-        rbf_centers = np.array(rbf_centers)  # shape: (50, 3*n_drones)
-        phi, phi_dim = generate_phi_rbf(env.shape,action_space,args.n_drones, rbf_centers, mu=5)
-        print(phi_dim)
+    #     rbf_centers = np.array(rbf_centers)  # shape: (50, 3*n_drones)
+    #     phi, phi_dim = generate_phi_rbf(env.shape,action_space,args.n_drones, rbf_centers, mu=5)
+    #     print(phi_dim)
 
     theta = np.zeros((args.n_drones, phi_dim))
 

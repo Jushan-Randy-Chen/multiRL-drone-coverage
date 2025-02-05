@@ -56,8 +56,9 @@ class PotentialGameEnv(gym.Env):
         
         # 3) Compute the new potential, and define reward = Δ potential !!!!
         new_potential = self._compute_potential()
-        reward = new_potential - self._last_potential
-        self._last_potential = new_potential
+        # reward = new_potential - self._last_potential
+        reward = new_potential
+        # self._last_potential = new_potential
         self._steps += 1
 
         # 4) Convert next_obs_list to a NumPy array

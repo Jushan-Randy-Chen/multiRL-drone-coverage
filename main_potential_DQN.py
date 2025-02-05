@@ -18,13 +18,13 @@ import torch.nn.functional as F
 # Import your environment classes. For example:
 from field_coverage_env import FieldCoverageEnv
 from potential_game_env import PotentialGameEnv
-from util import save_coverage_snapshot  # Assuming you have this function
+from util import save_coverage_snapshot, plot_coverage_masks  # Assuming you have this function
 
 # -------------------------
 # Define the DQN Network
 # -------------------------
 class DQN(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim=128):
+    def __init__(self, state_dim, action_dim, hidden_dim=64):
         """
         Args:
           state_dim: Dimension of the state (e.g., 3*n_drones for positions).
@@ -92,11 +92,11 @@ def main():
                         help='Environment dimensions: X Y Z. If not provided, derived from FOI.')
     parser.add_argument('--n_episodes', type=int, default=400, help='Number of training episodes')
     parser.add_argument('--episode_max_steps', type=int, default=2000, help='Max steps per episode')
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--gamma', type=float, default=0.9, help='Discount factor')
     parser.add_argument('--batch_size', type=int, default=64, help='Mini-batch size for training')
     parser.add_argument('--buffer_capacity', type=int, default=10000, help='Replay buffer capacity')
-    parser.add_argument('--eps_start', type=float, default=0.95, help='Initial epsilon for epsilon-greedy')
+    parser.add_argument('--eps_start', type=float, default=0.9, help='Initial epsilon for epsilon-greedy')
     parser.add_argument('--eps_end', type=float, default=0.05, help='Final epsilon')
     parser.add_argument('--eps_decay', type=int, default=1e5, help='Epsilon decay rate')
     parser.add_argument('--target_update', type=int, default=10, help='Frequency (in episodes) to update target network')
@@ -184,8 +184,8 @@ def main():
     steps_to_plot = [10, 20, 50, 100, 150]
 
     # Hyperparameters for early stopping based on Q–value improvement
-    q_improve_tol = 0.3     # tolerance threshold for improvement
-    patience = 5            # number of consecutive episodes to wait before stopping
+    q_improve_tol = 0.01     # tolerance threshold for improvement
+    patience = 10            # number of consecutive episodes to wait before stopping
 
     # Initialize variables before the training loop
     prev_avg_q = None
@@ -197,9 +197,10 @@ def main():
         ep_reward = 0.0
         t_start = perf_counter()
         for t in range(args.episode_max_steps):
-            if training_converged:
-                # Save snapshots on every step once convergence has been detected.
-                save_coverage_snapshot(env, t + 1, args.output_dir)
+            if (training_converged) or (ep==args.n_episodes - 1):
+                if (t+1) in steps_to_plot:
+                    # plot_coverage_masks(env, t + 1, args.output_dir)
+                    save_coverage_snapshot(env, t+1, args.output_dir)
 
             epsilon = get_epsilon(steps_done)
             action_idx = select_action(obs, epsilon)

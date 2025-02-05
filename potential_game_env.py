@@ -55,12 +55,15 @@ class PotentialGameEnv(gym.Env):
         next_obs_list, _, done, info = self.env.step(action_dict)
         
         # 3) Compute the new potential, and define reward = Δ potential !!!!
-        new_potential = self._compute_potential()
+        # new_potential = self._compute_potential()
+        new_potential = self._compute_potential_2()
+
         # reward = new_potential - self._last_potential
+
         reward = new_potential
         # self._last_potential = new_potential
         self._steps += 1
-
+        
         # 4) Convert next_obs_list to a NumPy array
         next_obs = np.array(next_obs_list, dtype=np.float32)
         return next_obs, reward, done, info
@@ -87,6 +90,26 @@ class PotentialGameEnv(gym.Env):
                 phi_S = np.sum(inter)
                 coefficient = ((-1)**(k-1)) * factorial(k-1)
                 potential += coefficient * phi_S
+
+        return potential
+    
+    def _compute_potential_2(self):
+        masks = self.env._view_masks()
+        foi = self.env.foi.astype(bool)
+        coverage = 0
+        for i, drone in self._drones.items():
+            coverage += np.sum(masks[i].flatten() & foi.flatten())
+        
+        drones = set(self._drones.keys(),)
+        overlap = 0
+        if len(drones) > 1:
+            for i, drone in self._drones.items():
+                mask = masks[i]
+                other_masks = np.sum([masks[x] for x in drones - {i}], axis=0)
+                overlap += np.sum(mask.flatten() & other_masks.flatten())
+        # if coverage == sum(foi.flatten()) and overlap == 0:
+        #     return 0.1
+        potential = coverage - overlap    
 
         return potential
 

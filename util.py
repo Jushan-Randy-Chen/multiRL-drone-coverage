@@ -50,9 +50,10 @@ def save_coverage_snapshot(env, step_idx, output_dir):
     plt.scatter(foi_points[:,1], foi_points[:,0], marker='*', color='red')
     
     # print(f"DEBUG: Number of drones found = {len(env._drones)}")
-
+    colors = ['blue', 'green', 'orange', 'purple', 'cyan', 'magenta', 'yellow', 'brown']  # extend as needed
     # Plot each drone’s bounding box for FOV
     for i, drone in env._drones.items():
+        color_idx = i % len(colors)
         x, y, z = drone.pos
         # print(x,y,z)
         # print(f"DEBUG: Drone {i} position: (x={x}, y={y}, z={z})")
@@ -72,7 +73,7 @@ def save_coverage_snapshot(env, step_idx, output_dir):
 
         rect = patches.Rectangle((y_min, x_min),  # note: (col, row) reversed if needed
                                  rect_height, rect_width,
-                                 linewidth=2, edgecolor='blue', facecolor='none')
+                                 linewidth=2, edgecolor=colors[color_idx], facecolor='none')
         plt.gca().add_patch(rect)
 
     plt.title(f"Coverage at step k={step_idx}")
@@ -84,6 +85,51 @@ def save_coverage_snapshot(env, step_idx, output_dir):
     plt.savefig(outpath, dpi=150)
     plt.close()
     print(f"Saved snapshot figure {outpath}")
+
+def plot_coverage_masks(env, step_idx, output_dir):
+    """
+    Plots each drone's discrete coverage as computed by _view_masks().
+    This is more accurate than using bounding rectangles, since it directly
+    reflects how coverage is computed in the environment.
+    """
+    plt.figure(figsize=(6,6))
+    
+    masks = env.env._view_masks()  # dict {drone_index: 2D array (mask)}
+    foi = env.foi
+    X, Y = foi.shape
+
+    # Plot the FOI (e.g., red stars for cells where foi>0)
+    foi_points = np.argwhere(foi > 0)
+    plt.scatter(foi_points[:,1], foi_points[:,0], marker='*', color='red', label='FOI')
+
+    # Plot each drone’s coverage points in a distinct color.
+    # We use a small marker size (e.g., s=10) for visibility.
+    colors = ['blue', 'green', 'orange', 'purple', 'cyan', 'magenta', 'yellow', 'brown']  # extend as needed
+    for i, mask in masks.items():
+        coverage_points = np.argwhere(mask > 0)
+        color_idx = i % len(colors)
+        plt.scatter(coverage_points[:,1], coverage_points[:,0],
+                    s=10, color=colors[color_idx], label=f"Drone {i} coverage")
+
+    # Optionally plot the drone positions as well.
+    # This helps show where each drone is located relative to its coverage.
+    for i, drone in env._drones.items():
+        x, y, z = drone.pos
+        color_idx = i % len(colors)
+        plt.scatter(y, x, marker='X', s=100, color=colors[color_idx],
+                    edgecolor='black', linewidths=1.5,
+                    label=f"Drone {i} position")
+
+    plt.title(f"Discrete Coverage (step={step_idx})")
+    plt.xlim([0, Y])
+    plt.ylim([0, X])
+    plt.gca().invert_yaxis()  # so (0,0) is bottom-left if you prefer
+    plt.grid(True)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')  # keep legend outside
+    outpath = os.path.join(output_dir, f"discrete_coverage_step_{step_idx}.png")
+    plt.savefig(outpath, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"Saved discrete coverage plot {outpath}")
 
 
 def generate_phi_rbf(env_shape, action_space, n_drones,

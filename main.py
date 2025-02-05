@@ -11,7 +11,7 @@ import shutil
 import os
 import time
 from time import perf_counter
-from util import generate_phi,save_coverage_snapshot, generate_phi_rbf
+from util import generate_phi,save_coverage_snapshot
 
 
 solvers.options['show_progress'] = False
@@ -86,7 +86,7 @@ def main():
     parser.add_argument('--n_drones', default=3, type=int, help='Number of drones to simulate.')
     parser.add_argument('--gamma', default=0.9, type=float, help='Discount factor.')
     parser.add_argument('--lr', default=0.1, type=float, help='Learning rate.')
-    parser.add_argument('--n_episodes', default=500, type=int, help='Number of episodes to simulate.')
+    parser.add_argument('--n_episodes', default=400, type=int, help='Number of episodes to simulate.')
     parser.add_argument('--episode_max_steps', default=2000, type=int, help='Maximum number of steps per episode.')
     parser.add_argument('--max_eps', default=0.95, type=float, help='Max epsilon for epsilon-greedy policy.')
     parser.add_argument('--min_eps', default=0.05, type=float, help='Min epsilon for epsilon-greedy policy.')

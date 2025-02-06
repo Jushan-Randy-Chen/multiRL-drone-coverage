@@ -89,6 +89,7 @@ class FieldCoverageEnv(gym.Env):
                 mask = masks[i]
                 other_masks = np.sum([masks[x] for x in drones - {i}], axis=0)
                 overlap += np.sum(mask.flatten() & other_masks.flatten())
+
         if coverage == sum(foi.flatten()) and overlap == 0:
             return 0.1
         return 0
@@ -103,10 +104,10 @@ class FieldCoverageEnv(gym.Env):
                 x_proj = np.tan(drone.fov) * z
                 y_proj = np.tan(drone.fov) * z
                 if all([
-                    xc > x - x_proj,
-                    xc < x + x_proj,
-                    yc > y - y_proj,
-                    yc < y + y_proj
+                    xc >= x - x_proj,  #TODO: >= or > ??
+                    xc <= x + x_proj,
+                    yc >= y - y_proj,
+                    yc <= y + y_proj
                 ]):
                     mask[xc, yc] = True
             view_masks[i] = mask

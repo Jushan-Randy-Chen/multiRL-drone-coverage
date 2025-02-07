@@ -55,12 +55,12 @@ class PotentialGameEnv(gym.Env):
         
         # 3) Compute the new potential, and define reward = Δ potential !!!!
         # new_potential = self._compute_potential()
-        # new_potential = self._compute_potential_2()
-        new_potential = self._compute_potential_sigmoid() 
+        new_potential = self._compute_potential_2()
+        # new_potential = self._compute_potential_sigmoid() 
         # reward = new_potential - self._last_potential
 
         reward = new_potential
-        done = reward >= 0.099
+        done = reward >= 10 #foi-0.csv only has 10 cells to cover! 
         # self._last_potential = new_potential
         self._steps += 1
         

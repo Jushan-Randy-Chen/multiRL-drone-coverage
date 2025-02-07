@@ -96,7 +96,7 @@ def main():
     parser.add_argument('--gamma', type=float, default=0.9, help='Discount factor')
     parser.add_argument('--batch_size', type=int, default=64, help='Mini-batch size for training')
     parser.add_argument('--buffer_capacity', type=int, default=10000, help='Replay buffer capacity')
-    parser.add_argument('--eps_start', type=float, default=0.9, help='Initial epsilon for epsilon-greedy')
+    parser.add_argument('--eps_start', type=float, default=0.95, help='Initial epsilon for epsilon-greedy')
     parser.add_argument('--eps_end', type=float, default=0.05, help='Final epsilon')
     parser.add_argument('--eps_decay', type=int, default=1e5, help='Epsilon decay rate')
     parser.add_argument('--target_update', type=int, default=10, help='Frequency (in episodes) to update target network')
@@ -198,7 +198,7 @@ def main():
         t_start = perf_counter()
         done = False
         for t in range(args.episode_max_steps):
-            if (training_converged) or (ep==args.n_episodes - 1):
+            if ep==args.n_episodes - 1:
                 # if (t+1) in steps_to_plot:
                     # plot_coverage_masks(env, t + 1, args.output_dir)
                 save_coverage_snapshot(env, t+1, args.output_dir)
@@ -206,7 +206,7 @@ def main():
             epsilon = get_epsilon(steps_done)
             action_idx = select_action(obs, epsilon)
             next_obs, reward, done, info = env.step(action_idx)
-
+            # print(f'Current potential is {reward}')
             ep_reward += reward
 
             # Store transition in the replay buffer.

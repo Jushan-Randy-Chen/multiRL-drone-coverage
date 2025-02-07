@@ -28,7 +28,6 @@ class PotentialGameEnv(gym.Env):
         # Observation: a list of n_drones positions = shape (n_drones, 3)
         # We'll represent it in a Box that spans the environment's shape
         X, Y, Z = self.env.shape
-        low  = np.zeros((self.n_drones, 3), dtype=np.float32)
         high = np.array([X, Y, Z], dtype=np.float32)
         high = np.tile(high, (self.n_drones,1))
         # self.observation_space = gym.spaces.Box(low=low, high=high, dtype=np.float32)
@@ -52,15 +51,16 @@ class PotentialGameEnv(gym.Env):
         
         # 2) Step the underlying multi-drone environment
         #    (We'll ignore its built-in 'reward' or 'global_reward'—instead we use potential.)
-        next_obs_list, _, done, info = self.env.step(action_dict)
+        next_obs_list, _, _, info = self.env.step(action_dict)
         
         # 3) Compute the new potential, and define reward = Δ potential !!!!
         # new_potential = self._compute_potential()
-        new_potential = self._compute_potential_2()
-
+        # new_potential = self._compute_potential_2()
+        new_potential = self._compute_potential_sigmoid() 
         # reward = new_potential - self._last_potential
 
         reward = new_potential
+        done = reward >= 0.099
         # self._last_potential = new_potential
         self._steps += 1
         
@@ -107,12 +107,31 @@ class PotentialGameEnv(gym.Env):
                 mask = masks[i]
                 other_masks = np.sum([masks[x] for x in drones - {i}], axis=0)
                 overlap += np.sum(mask.flatten() & other_masks.flatten())
-        # if coverage == sum(foi.flatten()) and overlap == 0:
-        #     return 0.1
+  
         potential = coverage - overlap    
 
         return potential
+    
+    def _compute_potential_sigmoid(self):
+        masks = self.env._view_masks()
+        foi = self.env.foi.astype(bool)
+        coverage = 0
+        for i, drone in self._drones.items():
+            coverage += np.sum(masks[i].flatten() & foi.flatten())
+        
+        drones = set(self._drones.keys(),)
+        overlap = 0
+        if len(drones) > 1:
+            for i, drone in self._drones.items():
+                mask = masks[i]
+                other_masks = np.sum([masks[x] for x in drones - {i}], axis=0)
+                overlap += np.sum(mask.flatten() & other_masks.flatten())
+  
+        H = coverage - overlap
 
+        global_reward = 0.1/(1+np.exp(-H))
+
+        return global_reward
 
 
 def generate_phi(env_shape, action_space, n_drones):

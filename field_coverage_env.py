@@ -29,6 +29,7 @@ class FieldCoverageEnv(gym.Env):
         self.fov = fov
         self.n_drones = n_drones
         self.max_steps = max_steps
+        # print(f"max_steps set to: {self.max_steps}")  # Debug print
         self.foi = foi
 
         self._drones = {}
@@ -60,7 +61,9 @@ class FieldCoverageEnv(gym.Env):
         
         reward = self._reward()
         success = reward > 0
-        done = success or self._steps == self.max_steps
+        
+        done = success
+ 
         return observation, reward, done, {'success': success}
 
     def _state(self):
@@ -90,7 +93,8 @@ class FieldCoverageEnv(gym.Env):
                 other_masks = np.sum([masks[x] for x in drones - {i}], axis=0)
                 overlap += np.sum(mask.flatten() & other_masks.flatten())
 
-        if coverage == sum(foi.flatten()) and overlap == 0:
+        # print(f'current overlap is {overlap}')
+        if (coverage == sum(foi.flatten())) and (overlap == 0):
             return 0.1
         return 0
 

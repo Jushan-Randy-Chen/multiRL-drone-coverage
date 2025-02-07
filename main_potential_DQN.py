@@ -181,7 +181,7 @@ def main():
 
     episode_rewards = []
     durations = []
-    steps_to_plot = [10, 20, 50, 100, 150]
+    # steps_to_plot = [10, 20, 50, 100, 150]
 
     # Hyperparameters for early stopping based on Q–value improvement
     q_improve_tol = 0.01     # tolerance threshold for improvement
@@ -196,15 +196,17 @@ def main():
         obs = env.reset()  # Observation: list/array of drone positions, shape (n_drones, 3)
         ep_reward = 0.0
         t_start = perf_counter()
+        done = False
         for t in range(args.episode_max_steps):
             if (training_converged) or (ep==args.n_episodes - 1):
-                if (t+1) in steps_to_plot:
+                # if (t+1) in steps_to_plot:
                     # plot_coverage_masks(env, t + 1, args.output_dir)
-                    save_coverage_snapshot(env, t+1, args.output_dir)
+                save_coverage_snapshot(env, t+1, args.output_dir)
 
             epsilon = get_epsilon(steps_done)
             action_idx = select_action(obs, epsilon)
             next_obs, reward, done, info = env.step(action_idx)
+
             ep_reward += reward
 
             # Store transition in the replay buffer.

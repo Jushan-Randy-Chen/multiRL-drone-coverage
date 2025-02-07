@@ -81,14 +81,14 @@ def main():
     parser.add_argument('foi', type=str, help='File containing FOI data.')
     parser.add_argument('output_dir', type=str, help='Output directory.')
     parser.add_argument('-f', action='store_true', help='Overwrite output directory if it already exists.')
-    parser.add_argument('--fov', type=float, default=np.radians(30), help='Drone field of vision.')
+    parser.add_argument('--fov', type=float, default=np.radians(25), help='Drone field of vision.')
     parser.add_argument('--env_dim', default=None, nargs=3, type=int, metavar=('X', 'Y', 'Z'), help='Environment dimensions. Will be inferred from FOI if not specified.')
     parser.add_argument('--n_drones', default=3, type=int, help='Number of drones to simulate.')
     parser.add_argument('--gamma', default=0.9, type=float, help='Discount factor.')
     parser.add_argument('--lr', default=0.01, type=float, help='Learning rate.')
     parser.add_argument('--n_episodes', default=400, type=int, help='Number of episodes to simulate.')
     parser.add_argument('--episode_max_steps', default=2000, type=int, help='Maximum number of steps per episode.')
-    parser.add_argument('--max_eps', default=0.95, type=float, help='Max epsilon for epsilon-greedy policy.')
+    parser.add_argument('--max_eps', default=0.9, type=float, help='Max epsilon for epsilon-greedy policy.')
     parser.add_argument('--min_eps', default=0.05, type=float, help='Min epsilon for epsilon-greedy policy.')
     parser.add_argument('--eps_decay', default=10000, type=float, help='Epsilon decay rate for epsilon-greedy policy.')
     parser.add_argument('--seed', type=int, default=None, help='Random seed.')
@@ -108,31 +108,12 @@ def main():
     foi = np.genfromtxt(args.foi, delimiter=',')
     env_dim = args.env_dim if args.env_dim is not None else tuple([x for x in foi.shape] + [max(foi.shape)])
 
-    env = FieldCoverageEnv(env_dim, foi=foi, fov=args.fov, n_drones=args.n_drones)
+    env = FieldCoverageEnv(env_dim, foi=foi, fov=args.fov, n_drones=args.n_drones, max_steps=args.episode_max_steps)
     action_space = env.action_space.n
 
     # if args.n_drones <=2:
     phi, phi_dim = generate_phi(env_dim, action_space, args.n_drones)
     print(phi_dim)
-    # else:
-    #     num_centers = 10
-    #     rbf_centers = []
-    #     n_drones = 3
-    #     X, Y, Z = env.shape
-    #     for _ in range(num_centers):
-    #         # Each drone i: (x_i,y_i,z_i)
-    #         # Flatten them in order => (x0,y0,z0, x1,y1,z1, x2,y2,z2)
-    #         center = []
-    #         for i in range(n_drones):
-    #             cx = np.random.uniform(0, X-1)  # in [0..X-1]
-    #             cy = np.random.uniform(0, Y-1)  # in [0..Y-1]
-    #             cz = np.random.uniform(1,  Z  ) # in [1..Z]
-    #             center.extend([cx, cy, cz])
-    #         rbf_centers.append(center)
-
-    #     rbf_centers = np.array(rbf_centers)  # shape: (50, 3*n_drones)
-    #     phi, phi_dim = generate_phi_rbf(env.shape,action_space,args.n_drones, rbf_centers, mu=5)
-    #     print(phi_dim)
 
     theta = np.zeros((args.n_drones, phi_dim))
 
@@ -157,7 +138,7 @@ def main():
                     epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
                     pi_A = pi(phi, theta, state, eps=epsilon)  
                     next_state, reward, done, meta = env.step(pi_A)
-
+                    
                     A = tuple([pi_A[drone] for drone in range(args.n_drones)])
                     actions = product(*((np.arange(action_space),) * args.n_drones))
                     q_next = np.max([phi(next_state, action).T.dot(theta[i]) for action in actions])

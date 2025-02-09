@@ -181,7 +181,7 @@ def main():
 
     episode_rewards = []
     durations = []
-    # steps_to_plot = [10, 20, 50, 100, 150]
+    steps_to_plot = [10, 20, 50, 100, 150]
 
     # Hyperparameters for early stopping based on Q–value improvement
     q_improve_tol = 0.01     # tolerance threshold for improvement
@@ -200,14 +200,16 @@ def main():
         for t in range(args.episode_max_steps):
             if ep==args.n_episodes - 1:
                 # if (t+1) in steps_to_plot:
-                    # plot_coverage_masks(env, t + 1, args.output_dir)
                 save_coverage_snapshot(env, t+1, args.output_dir)
 
             epsilon = get_epsilon(steps_done)
             action_idx = select_action(obs, epsilon)
-            next_obs, reward, done, info = env.step(action_idx)
+            next_obs, reward, _, info = env.step(action_idx)
             # print(f'Current potential is {reward}')
             ep_reward += reward
+
+            if ep_reward >= 10*args.episode_max_steps:
+                done = True
 
             # Store transition in the replay buffer.
             replay_buffer.push(np.array(obs).flatten(), action_idx, reward,
@@ -316,6 +318,15 @@ def main():
     plt.ylabel('Durations')
     plt.legend()
     plt.savefig(os.path.join(args.output_dir, 'episode_durations.png'))
+    print(f"Training complete. Plots and data saved in {args.output_dir}.")
+
+
+    plt.figure(dpi=150)
+    plt.plot(episode_rewards, label='Duration per episode')
+    plt.xlabel('Episode')
+    plt.ylabel('Rewards')
+    plt.legend()
+    plt.savefig(os.path.join(args.output_dir, 'episode_rewards.png'))
     print(f"Training complete. Plots and data saved in {args.output_dir}.")
 
     # Save training logs.

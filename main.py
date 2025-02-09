@@ -87,7 +87,7 @@ def main():
     parser.add_argument('--gamma', default=0.9, type=float, help='Discount factor.')
     parser.add_argument('--lr', default=0.01, type=float, help='Learning rate.')
     parser.add_argument('--n_episodes', default=400, type=int, help='Number of episodes to simulate.')
-    parser.add_argument('--episode_max_steps', default=2000, type=int, help='Maximum number of steps per episode.')
+    parser.add_argument('--episode_max_steps', default=200, type=int, help='Maximum number of steps per episode.')
     parser.add_argument('--max_eps', default=0.9, type=float, help='Max epsilon for epsilon-greedy policy.')
     parser.add_argument('--min_eps', default=0.05, type=float, help='Min epsilon for epsilon-greedy policy.')
     parser.add_argument('--eps_decay', default=10000, type=float, help='Epsilon decay rate for epsilon-greedy policy.')
@@ -137,7 +137,7 @@ def main():
                 for i in range(args.n_drones):
                     epsilon = args.min_eps + (args.max_eps - args.min_eps) * math.exp(-1. * steps / args.eps_decay)
                     pi_A = pi(phi, theta, state, eps=epsilon)  
-                    next_state, reward, done, meta = env.step(pi_A)
+                    next_state, reward, _, meta = env.step(pi_A)
                     
                     A = tuple([pi_A[drone] for drone in range(args.n_drones)])
                     actions = product(*((np.arange(action_space),) * args.n_drones))
@@ -146,10 +146,12 @@ def main():
                     episode_rewards[episode] += reward
             
                     state = next_state
-                    if done:
-                        break
+                    # if done:
+                    #     break
                 episode_steps[episode] += 1
                 steps += 1
+                if episode_rewards[episode] >= 0.3 * args.episode_max_steps:
+                    done = True
                 if done:
                     break
             tf = perf_counter()

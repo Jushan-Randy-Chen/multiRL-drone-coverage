@@ -3,7 +3,6 @@ import numpy as np
 from enum import Enum
 from itertools import combinations
 
-
 class FieldCoverageEnv(gym.Env):
     """Field coverage environment for multi-agent cooperative reinforcement learning."""
 

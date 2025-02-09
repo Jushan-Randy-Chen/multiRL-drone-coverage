@@ -208,7 +208,7 @@ def main():
             # print(f'Current potential is {reward}')
             ep_reward += reward
 
-            if ep_reward >= 10*args.episode_max_steps:
+            if ep_reward >= 16*args.episode_max_steps: # >=16*args.episode_max_steps for foi-2.csv
                 done = True
 
             # Store transition in the replay buffer.
@@ -244,7 +244,7 @@ def main():
                 next_q_flat = target_net(next_state_flat, candidate_actions_flat)  # (batch_size*num_actions, 1)
                 next_q_flat = next_q_flat.view(batch_size_val, num_actions)
                 max_next_q = next_q_flat.max(dim=1)[0]
-
+                
                 target_q = reward_batch + args.gamma * max_next_q * (1 - done_batch)
                 loss = F.mse_loss(current_q, target_q)
 

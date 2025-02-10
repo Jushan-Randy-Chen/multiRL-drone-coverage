@@ -5,7 +5,6 @@ import math
 import random
 import pickle
 import numpy as np
-from itertools import product
 from time import perf_counter
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -18,8 +17,7 @@ import torch.nn.functional as F
 # Import your environment classes. For example:
 from field_coverage_env import FieldCoverageEnv
 from potential_game_env import PotentialGameEnv
-from util import save_coverage_snapshot, plot_coverage_masks  # Assuming you have this function
-
+from util import save_coverage_snapshot 
 # -------------------------
 # Define the DQN Network
 # -------------------------
@@ -91,7 +89,7 @@ def main():
     parser.add_argument('--env_dim', type=int, nargs=3, default=None,
                         help='Environment dimensions: X Y Z. If not provided, derived from FOI.')
     parser.add_argument('--n_episodes', type=int, default=400, help='Number of training episodes')
-    parser.add_argument('--episode_max_steps', type=int, default=2000, help='Max steps per episode')
+    parser.add_argument('--episode_max_steps', type=int, default=200, help='Max steps per episode')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--gamma', type=float, default=0.9, help='Discount factor')
     parser.add_argument('--batch_size', type=int, default=64, help='Mini-batch size for training')
